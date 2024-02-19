@@ -2,8 +2,8 @@ from aiogram import Bot, Dispatcher
 from typing import Final
 
 import asyncio
-TOKEN :Final='6889510436:AAFdV8cnLmxl8R67Rr2iihlXy4VwcHtcz-E'#gazpromcert_bot
-bot = Bot(token=TOKEN)
+#TOKEN :Final='6889510436:AAFdV8cnLmxl8R67Rr2iihlXy4VwcHtcz-E'#gazpromcert_bot
+bot = Bot(token='6889510436:AAFdV8cnLmxl8R67Rr2iihlXy4VwcHtcz-E')
 dp = Dispatcher(bot=bot)
 
 async def main():

@@ -1,7 +1,7 @@
 from main import bot, dp
 from keyboards import keyboard
 from aiogram import types
-from aiogram.dispatcher.filters import Command
+from aiogram.dispatcher import Command
 
 @dp.message_handler(Command('start'))
 async def start(message: types.Message):
