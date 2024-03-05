@@ -10,3 +10,4 @@
 /test.db
 /test.sqbpro
 /test_bot_aio.py
+*.env
