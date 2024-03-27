@@ -14,13 +14,30 @@ from telegram.constants import ParseMode
 import os
 from dotenv import load_dotenv
 import json
+import datetime
+from datetime import datetime
+import pytest
+import csv
 
 CHAT_ID :Final ='-1002068836030'
 DB_FILE = 'ronktd'
 TOKEN=''
 
-def try_get_tgID(str:FIO):
-    return None
+def try_get_tgID(FN:str):
+    """Попытаемся получить по ФИО TelegramId из БД"""
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()  
+    req=(f"SELECT FIO FROM AllUsers WHERE TgId='{FN}'")
+    print(req)
+    try:
+        cursor.execute(req)
+        ret = cursor.fetchmany(1)
+    except:
+        err=('None')
+        return err
+    finally:
+        connection.close()
+    return ret
 
 def send_message(token, chat_id, text):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -34,6 +51,69 @@ def send_message(token, chat_id, text):
     else:
         print("Ошибка при отправке сообщения")
 
+def convert_exp():
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()  
+    
+    ret:str
+    i=1
+    while i < 342:
+        #req=(f"SELECT ExpDate,Key FROM Prombez WHERE key={i}")
+        req=(f"SELECT ExpDate,Key FROM Certificates WHERE key={i}")
+        cursor.execute(req)        
+        ret,key=cursor.fetchone() 
+        print(ret)
+        ret=ret.strip()
+        YYYY=ret[6]+ret[7]+ret[8]+ret[9]
+        MM=ret[3]+ret[4]
+        DD=ret[0]+ret[1]
+        date_=(f"{YYYY}-{MM}-{DD}")
+        print(date_)
+        #req1=(f"UPDATE Prombez SET ExpDateUS = '{date_}' WHERE Key={i}")
+        req1=(f"UPDATE Certificates SET ExpDateUS = '{date_}' WHERE Key={i}")
+        cursor.execute(req1)
+        connection.commit()
+        i=i+1
+    connection.close()
+    return
+
+def get_prombez(FN:str,start_date,end_date)->list:
+    user_id=get_user_id(FN)
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()   
+    req=(f"SELECT Education.Name,ExpDate,Certificate,Protocol FROM Prombez,Education WHERE USER={user_id} AND Prombez.Education=Education.Key AND ExpDateUs BETWEEN '{start_date}' AND '{end_date}'")
+    print(req)
+    try:
+        cursor.execute(req)
+        ret = cursor.fetchmany(10)
+        print(ret)
+        return ret
+    except:
+        err=('None')
+        return err
+    finally:
+        connection.close()
+
+
+def get_user_id(FN:str)->str:
+    print(FN)
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()   
+    req=(f"SELECT DISTINCT Key FROM AllUsers WHERE FIO LIKE '{FN}%'")
+    print(req)
+    try:
+        cursor.execute(req)
+        user_id = cursor.fetchall()
+        user_id= clear_FIO(user_id)
+        print(user_id)
+        connection.close()
+        return user_id
+    except:
+        err=('None')
+        return err
+    finally:
+        connection.close()
+
 def get_FIO(FN:str)->list:
     # Устанавливаем соединение с базой данных
     connection = sqlite3.connect(DB_FILE)
@@ -46,8 +126,9 @@ def get_FIO(FN:str)->list:
     except:
         err=('None')
         return err
-    print(ret)
-    connection.close()
+        print(ret)
+    finally:
+        connection.close()
     return  ret
 
 def get_cert_naks(FN:str)->list:
@@ -66,7 +147,8 @@ def get_cert_naks(FN:str)->list:
         return err
     #print(f'{fio} {exp} {cert} {method}')
     #print(ret)
-    connection.close()
+    finally:
+        connection.close()
     return  ret#fio,exp,cert,method
 
 def get_cert(FN:str)->list:
@@ -85,86 +167,69 @@ def get_cert(FN:str)->list:
         return err
     #print(f'{fio} {exp} {cert} {method}')
     #print(ret)
-    connection.close()
+    finally:
+        connection.close()
     return  ret#fio,exp,cert,method
 
-def get_exp(SN:str)->list:
-    # Устанавливаем соединение с базой данных
+def notify_me(tgId:str,notify:int):
     connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-    #cursor.execute(f'SELECT Devices."ExpDate", DeviceType."DeviceType" FROM Devices INNER JOIN Devices ON (Devices."DeviceType"=DeviceType."Key") WHERE SerNumber={SN}')
-    cursor.execute("SELECT ExpDate,Сertificate,DeviceType FROM Devices WHERE SerNumber = ?", (SN,))
-    exp,cert,dev = cursor.fetchone()
-    #try:
-        #cert=exp[0]
-        #dev=exp[1]
-        #print (cert)
-        #print(dev)
-    #except BaseException:
-    #    print('Error')
-    #for exp in cursor:
-    #    print(exp) 
-    #cursor.execute(f'SELECT Device,Key FROM DeviceType WHERE Key={dev}')
-    #dev_= cursor.fetchall()
-    #print (exp)
-
-    print(f'{exp} {cert} {dev}')
-    # Выводим результаты
-   
-    # Закрываем соединение
+    cursor = connection.cursor()   
+    req=(f"UPDATE AllUsers SET Notify={notify} WHERE TgId = '{tgId}'")
+    print(req)
+    cursor.execute(req)
+    # Сохраняем изменения и закрываем соединение
+    connection.commit()
     connection.close()
-    return exp,cert,dev
 
-def get_device(SN:str)->str:
-    # Устанавливаем соединение с базой данных
+def set_tgId(FN:str,tgId:str):
     connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-    cursor.execute("SELECT DeviceType FROM Devices WHERE SerNumber = ?", (SN,))
-    dev = cursor.fetchone()
-    print(dev)
-    cursor.execute("SELECT Device FROM DeviceType WHERE Key=?",dev)
-    device=cursor.fetchone()
-    print(device)
-    # Выводим результаты
-    for device in device:
-        print(device)
-    
-    # Закрываем соединение
+    cursor = connection.cursor()   
+    print(FN)
+    req=(f"UPDATE AllUsers SET TgId = {tgId} WHERE FIO = '{FN}'")
+    print(req)
+    cursor.execute(req)
+    # Сохраняем изменения и закрываем соединение
+    connection.commit()
     connection.close()
-    return device
+ 
+def clear_FIO(s)->str:
+    s=str(s).replace('(','')
+    s=str(s).replace(')','')
+    s=str(s).replace("'",'')
+    s=str(s).replace(',','')
+    s=str(s).replace('[','')
+    s=str(s).replace(']','')
+    return s
 
-def get_mydev(id:str)->list:
-    # Устанавливаем соединение с базой данных
-    connection = sqlite3.connect(DB_FILE)
-    cursor = connection.cursor()
-    # Выбираем всех пользователей
-    cursor.execute("SELECT * FROM Devices WHERE Owner = ?", (id,))
-    mydev=cursor.fetchall()
-    return mydev
+def prepare(list, expired)->str:
+    list=str(list).replace('[','\n')
+    if expired:
+        list=str(list).replace('(','❌ ')
+    else:
+        list=str(list).replace('(','✅ ')
+        #list=str(list).replace('(','✔️ ')
+    list=str(list).replace(')','\n')
+    list=str(list).replace("'",'')
+    list=str(list).replace(',','')
+    list=str(list).replace(']','')
+    return list    
+
+def get_date()->str:
+    now = datetime.now() 
+    return now.strftime("%Y-%m-%d")
 
 # Define a `/start` command handler.
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message with a button that opens a the web app."""
     await update.message.reply_text(
-        "Please press the button below to choose a color via the WebApp.",
+        "РОНКТД, НАКС, Промбезопасность",
         reply_markup=ReplyKeyboardMarkup.from_button(
             KeyboardButton(
-                text="Поиск приборов",
+                text="Поиск обучений",
                 web_app=WebAppInfo(url="https://gazpromcert-1be08.web.app"),
             )
         ),
     )
-    # """Sends a message with three inline buttons attached."""
-    # keyboard = [
-    #     [
-    #         InlineKeyboardButton("Option 1", callback_data="1"),
-    #         InlineKeyboardButton("Option 2", callback_data="2"),
-    #     ],
-    #     [InlineKeyboardButton("Status", callback_data="3")],
-    # ]
-    # reply_markup = InlineKeyboardMarkup(keyboard)
-    # await update.message.reply_text("Please choose:", reply_markup=reply_markup)    
-    # await update.message.reply_text('Hello! Thanks for chatting with me!', reply_markup=reply_markup)
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parses the CallbackQuery and updates the message text."""
@@ -177,14 +242,53 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
     if query.data=='naks':
         print('naks')
-        list=get_cert_naks(FIOsearch)    
+        list=get_cert_naks(FIOsearch)   
+
+    if query.data=='prombez':
         
-    list=str(list).replace('[','\n')
-    list=str(list).replace('(','✔️ ')
-    list=str(list).replace(')','\n')
-    list=str(list).replace("'",'')
-    list=str(list).replace(',','')
-    list=str(list).replace(']','')
+        print('prombez')
+        list=get_prombez(FIOsearch,get_date(),'2100-01-01')  
+
+    if query.data=='its_my':
+        print('its_my')
+        keyboard = [
+        [
+            InlineKeyboardButton("Да", callback_data="yes"),
+            InlineKeyboardButton("Нет", callback_data="no"),
+        ],]
+        reply_markup1 = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_reply_markup(reply_markup1)
+        return
+
+
+    if query.data=='notify':
+        print('notify')
+        FIO=try_get_tgID(query.from_user.id)
+        if len(FIO)==0:
+            await query.edit_message_text(text=f"Необходимо привязать TelegramID")
+        else:
+            notify_me(query.from_user.id,1)
+            await query.edit_message_text(text=f"Вы подписаны на уведомления")
+
+    if query.data=='cancel':
+        print('notify')
+        FIO=try_get_tgID(query.from_user.id)
+        if len(FIO)==0:
+            await query.edit_message_text(text=f"Необходимо привязать TelegramID")
+        else:
+            notify_me(query.from_user.id,0)
+            await query.edit_message_text(text=f"Вы отписались от уведомлений")
+
+    if query.data=='yes':
+        print('yes')
+        set_tgId(FIOsearch,query.from_user.id) 
+        await query.edit_message_text(text=f"{FIOsearch} соответствует TgId={query.from_user.id}")
+        return
+    
+    if query.data=='no':
+        print('no')
+        await query.edit_message_text(text=f"Ну и ладно")
+    list=prepare(list,False)
     print(list)
      # CallbackQueries need to be answered, even if no notification to the user is needed
     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
@@ -192,15 +296,60 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     #await query.edit_message_text(text=f"Selected option: {query.data}")
     await query.edit_message_text(text=f"👷 {FIOsearch} {list}")
 async def help_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
-    await update._bot.send_document(172287348,'2024-02-12_results.xls')
+    #convert_exp()
     await update.message.reply_text('I can help you!')
 
 async def custom_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
-    s=get_mydev(update.message.from_user.id)
-    if not s:    
-        await update.message.reply_text('Приборов не записано')
-    else:
-        await update.message.reply_text(f'{s}')
+    print(update.message.from_user.id)
+    FIO=try_get_tgID(update.message.from_user.id)
+    if (len(FIO)==0):
+        await update.message.reply_text(f'Не найдено')
+        return
+    print(FIO)
+    FIO=clear_FIO(FIO)
+    print(FIO)
+    now = datetime.now() 
+    list=get_cert(FIO)
+    list2=get_prombez(FIO,'1950-01-01',get_date())
+    list22=get_prombez(FIO,get_date(),'2100-01-01')
+    list3=get_cert_naks(FIO)           
+    list=prepare(list,False)
+    list2=prepare(list2,True)
+    list22=prepare(list22,False) 
+    list3=prepare(list3,False)    
+    print(list)
+    await update.message.reply_text(f'РОНКТД {list}\nПромбез {list2} {list22}\nНАКС {list3}')
+
+async def csv_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
+    #await update.message.reply_text(f'Не реализовано')    
+    await update._bot.send_document(update.message.from_user.id,'2024-02-12_results.xls')
+    return
+
+def test_runonce ():
+    assert True,"Error"
+#@pytest.fixture
+
+
+async def pdf_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f'Не реализовано')
+    return
+
+async def notify_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
+        FIO=try_get_tgID(update.message.from_user.id)
+        if not FIO:
+            await update.message.reply_text(text=f"Необходимо привязать TelegramID")
+        else:
+            notify_me(update.message.from_user.id,1)
+            await update.message.reply_text(text=f"Вы подписаны на уведомления")
+
+async def cancel_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
+        FIO=try_get_tgID(update.message.from_user.id)
+        if not FIO:
+            await update.message.reply_text(text=f"Необходимо привязать TelegramID")
+        else:
+            notify_me(update.message.from_user.id,0)
+            await update.message.reply_text(text=f"Вы отписались от уведомлений")
+
 
 def handle_response(text:str) -> str:
     processed: str=text.lower()
@@ -238,10 +387,10 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     if not query:  # empty query should not be handled
         return
-    s=get_FIO(query.strip())     
+    s=get_FIO(query.strip())    
 
     print(len(s))
-    if len(s)==0:
+    if not s:
         print('Not found')
         results = [
         InlineQueryResultArticle(
@@ -252,21 +401,24 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             ),
         ]    
     else:
-         #   return
-        #d=get_device(query.strip())
-        #print(f'SSSS{s[0]}')
         keyboard = [
         [
             InlineKeyboardButton("РОНКТД", callback_data="ronktd"),
             InlineKeyboardButton("НАКС", callback_data="naks"),
         ],
-        [InlineKeyboardButton("Промбезопасность", callback_data="prombez")],
-        ]
+
+        [InlineKeyboardButton("Промбезопасность", callback_data="prombez"),],
+
+        [InlineKeyboardButton("Это я!",callback_data="its_my"),
+         InlineKeyboardButton("Уведомлять",callback_data="notify"),
+         InlineKeyboardButton("Отменить", callback_data="cancel"),
+        ]]
         reply_markup1 = InlineKeyboardMarkup(keyboard)
         i=0
         results=list()
         while i < (len(s)):
             if len(s[i])>0:
+                #s=clear_FIO(s)
                 s[i]=str(s[i]).replace('(','')
                 s[i]=str(s[i]).replace(')','')
                 s[i]=str(s[i]).replace("'",'')
@@ -280,31 +432,8 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                     ))
             i=i+1
         print(results)
-        #     InlineQueryResultArticle(
-        #         id=str(uuid4()),
-        #         #title="Caps",
-        #         title=f'Its expired {s[1]}',
-        #         input_message_content=InputTextMessageContent(f'Its expired {s[1]}'),
-        #         hide_url=True
-        #     ),
-        #     InlineQueryResultArticle(
-        #         id=str(uuid4()),
-        #         title=f'Cert {s[2]}',
-        #         input_message_content=InputTextMessageContent(f'Cert {s[2]}'),
-        #         hide_url=True
-        #     ),
-        #     InlineQueryResultArticle(
-        #         id=str(uuid4()),
-        #         title=f'Method {s[3]}',
-        #         input_message_content=InputTextMessageContent(f'Method {s[3]}'),
-        #         hide_url=True
-        #     ),
-        # ]    
-
-    #btns=InlineQueryResultsButton('Take',start_parameter='1')#,
-    #InlineQueryResultsButton('More',start_parameter='2'),]
     await update.inline_query.answer(results)
-    #send_message(TOKEN,CHAT_ID,f'Its expired {s}')
+    
 def btn_take(update:Update, context:ContextTypes.DEFAULT_TYPE)->None:
     query = update.callback_query
     print('Query data is....')
@@ -337,7 +466,11 @@ def main():
     #app.add_handler(CommandHandler('start',start_command))
     app.add_handler(CommandHandler('help',help_command))
     app.add_handler(CommandHandler('start',start))
-    app.add_handler(CommandHandler('mydev',custom_command))
+    app.add_handler(CommandHandler('myedu',custom_command))
+    app.add_handler(CommandHandler('csv',csv_command))
+    app.add_handler(CommandHandler('pdf',pdf_command))
+    app.add_handler(CommandHandler('notify',notify_command))
+    app.add_handler(CommandHandler('cancel',cancel_command))
     app.add_handler(MessageHandler(filters.TEXT,handle_message))
     app.add_handler(InlineQueryHandler(inline_query))
     app.add_handler(CallbackQueryHandler(button))

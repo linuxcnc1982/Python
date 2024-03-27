@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="2.878" timestamp="2024-03-22T11:17:00.510437" hostname="WIN-TOP6LO12M03"><testcase classname="test_ronktd" name="test_runonce" time="0.001" /></testsuite></testsuites>
