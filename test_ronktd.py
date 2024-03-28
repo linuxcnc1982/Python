@@ -19,9 +19,11 @@ from datetime import datetime
 import pytest
 import csv
 
+
 CHAT_ID :Final ='-1002068836030'
 DB_FILE = 'ronktd'
 TOKEN=''
+
 
 def try_get_tgID(FN:str):
     """Попытаемся получить по ФИО TelegramId из БД"""
@@ -463,7 +465,6 @@ def main():
     TOKEN=os.getenv('TOKEN')
     print(TOKEN)
     app=Application.builder().token(TOKEN).build()
-    #app.add_handler(CommandHandler('start',start_command))
     app.add_handler(CommandHandler('help',help_command))
     app.add_handler(CommandHandler('start',start))
     app.add_handler(CommandHandler('myedu',custom_command))
