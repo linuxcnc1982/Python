@@ -324,7 +324,7 @@ async def custom_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
 async def csv_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
     #await update.message.reply_text(f'Не реализовано')    
-    await update._bot.send_document(update.message.from_user.id,'1.pdf')
+    await update._bot.send_document(update.message.from_user.id,'1.csv')
     return
 
 def test_runonce ():
