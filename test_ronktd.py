@@ -324,7 +324,7 @@ async def custom_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
 
 async def csv_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
     #await update.message.reply_text(f'Не реализовано')    
-    await update._bot.send_document(update.message.from_user.id,'2024-02-12_results.xls')
+    await update._bot.send_document(update.message.from_user.id,'1.pdf')
     return
 
 def test_runonce ():
@@ -333,7 +333,7 @@ def test_runonce ():
 
 
 async def pdf_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f'Не реализовано')
+    await update._bot.send_document(update.message.from_user.id,'1.pdf')
     return
 
 async def notify_command(update: Update, context:ContextTypes.DEFAULT_TYPE):
