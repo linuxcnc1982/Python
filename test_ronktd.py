@@ -476,7 +476,6 @@ def main():
     app.add_handler(InlineQueryHandler(inline_query))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(ChosenInlineResultHandler(btn_take))
-    #app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     app.add_error_handler(error)
     print('Polling...')
