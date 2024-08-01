@@ -21,10 +21,15 @@ from datetime import datetime
 import pytest
 import csv
 
+
+#TODO 
+
 CHAT_ID: Final = '-1002068836030'
 DB_FILE = 'ronktd'
 TOKEN = ''
 BOT_USERNAME='gazpromcert_bot'
+
+
 
 def try_get_tgID(FN: str):
     """Попытаемся получить по ФИО TelegramId из БД"""
@@ -346,7 +351,7 @@ async def csv_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def test_runonce():
-    assert True, "Error"
+    assert False, "Error"
 
 
 # @pytest.fixture
